@@ -2,85 +2,136 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Nyake73</title>
+  <title>にけのラズタンク進捗(ChatType)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #chatLog {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
 <body>
-<div id="lockScreen" class="card m-3 p-3">
-  <h3>パスワードを入力してください</h3>
-  <input id="pagePass" class="form-control mb-2" type="password" placeholder="password">
-  <button class="btn btn-outline-secondary" onclick="unlockPage()">確認</button>
-</div>
-
-<div id="pageContent" style="display:none;">
-  <!-- ここに今の全部のページ内容が入る -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
   <div class="container-fluid">
-    <a class="navbar-brand" href="73nikke/index.html">Nyake73</a>
+    <a class="navbar-brand" href="../../index.html">Nyake73</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
-          <a class="nav-link" href="73nikke/index.html">プロフィール</a>
+            <a class="nav-link" href="#" onclick="openSettings()">名前の変更</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#" onclick="logout()">ログアウト</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" aria-disabled="true">近々小説の項目を追加予定。</a>
+            <a class="nav-link" href="../index.html">Page_back</a>
         </li>
       </ul>
     </div>
   </div>
   </nav>
-  <div class="card m-3 p-3">
-  <h1>ラズタンクv2.0</h1>
-  <p>Nyakeのラズタンク記録。</p>
-  <a class="btn btn-outline-primary" href="raztank_kiroku/index.html">raztank開発</a>
-  </div>
-  <div class="card m-3 p-3">
-  <h1>Pythonコード</h1>
-  <p>コードのの練習記録。</p>
-  <a class="btn btn-outline-danger" href="python_rensyu/index.html">python練習</a>
-  </div>
-  <div class="card m-3 p-3">
-  <h1>3Dプリンター</h1>
-  <p>3D設計の練習記録。(初心者)</p>
-  <a class="btn btn-outline-warning" href="3dprint_soft/index.html">3D設計練習</a>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-const PAGE_PASSWORD = "Jusk83T64abulQE";
+
+    <div class="card m-3 p-3">
+      <h1>進捗チャット</h1>
+      <p>☆raztankの進捗を文章のみで簡単にまとめたもの</p>
+    </div>
+
+    <div id="chatLog" class="card m-3 p-3"></div>
+
+    <div id="userSetup" class="card m-3 p-3">
+        <input id="userName" class="form-control mb-2" placeholder="name">
+        <input id="adminPass" class="form-control mb-2" type="password" placeholder="pass（任意）">
+        <button class="btn btn-outline-warning" onclick="saveUser()">Ok</button>
+    </div>
+
+    <div class="card m-3 p-3" style="position: sticky; bottom: 0; z-index: 10;">
+        <textarea id="chatInput" class="form-control" rows="3" placeholder="進捗(KPT)"></textarea>
+        <button class="btn btn-outline-primary mt-2" onclick="postChat()">投稿</button>
+    </div>
+
+<script>
+const ADMIN_PASSWORD ="nyanrhif375";
+
+// ★★★ にけの GAS URL をここに入れる ★★★
+const GAS_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
 
 window.onload = () => {
-  if (localStorage.getItem("pageUnlocked") === "true") {
-    document.getElementById("lockScreen").style.display = "none";
-    document.getElementById("pageContent").style.display = "block";
+  loadChats();
+
+  const savedName = localStorage.getItem("userName");
+  if (savedName) {
+    document.getElementById("userSetup").style.display = "none";
   }
 };
 
-function unlockPage() {
-  const input = document.getElementById("pagePass").value;
+function saveUser() {
+  const nameInput = document.getElementById("userName");
+  const passInput = document.getElementById("adminPass");
 
-  if (input === PAGE_PASSWORD) {
-    // 認証済みを保存
-    localStorage.setItem("pageUnlocked", "true");
-
-    document.getElementById("lockScreen").style.display = "none";
-    document.getElementById("pageContent").style.display = "block";
-  } else {
-    alert("パスワードが違います");
+  if (nameInput.value.trim() === "") {
+    alert("name");
+    return;
   }
+
+  localStorage.setItem("userName", nameInput.value);
+  localStorage.setItem("adminAuth", passInput.value === ADMIN_PASSWORD);
+
+  document.getElementById("userSetup").style.display = "none";
 }
-  </script>
-  <script>
-function logout() {
-  localStorage.removeItem("pageUnlocked");
-  location.reload(); // ページをリロードしてロック画面に戻す
+
+function postChat() {
+  const input = document.getElementById("chatInput");
+  if (input.value.trim() === "") return;
+
+  const name = localStorage.getItem("userName");
+  const isAdmin = localStorage.getItem("adminAuth") === "true";
+
+  fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      name: name,
+      text: input.value,
+      admin: isAdmin
+    })
+  }).then(() => {
+    input.value = "";
+    loadChats();
+  });
 }
-  </script>
-</div>
+
+function loadChats() {
+  const log = document.getElementById("chatLog");
+  log.innerHTML = "";
+
+  fetch(GAS_URL)
+    .then(res => res.json())
+    .then(data => {
+      data.forEach((row) => {
+        const [name, text, admin] = row;
+        const adminMark = admin === "true" ? "🐾" : "#";
+
+        const post = document.createElement("div");
+        post.className = "alert alert-secondary mt-2";
+        post.innerHTML = `
+          <strong>${adminMark} ${name}</strong><br>
+          <span>${text}</span>
+        `;
+        log.appendChild(post);
+      });
+    });
+}
+
+function openSettings() {
+  document.getElementById("userSetup").style.display = "block";
+}
+
+function resetUser() {
+  localStorage.removeItem("userName");
+  localStorage.removeItem("adminAuth");
+  document.getElementById("userSetup").style.display = "block";
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
